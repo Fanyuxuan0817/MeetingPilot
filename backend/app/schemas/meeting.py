@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import Enum
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
 
 
 class MeetingStatus(str, Enum):
@@ -23,9 +24,15 @@ class MeetingCreate(MeetingBase):
     started_at: datetime
 
 
+def _empty_str_to_none(v: str | None) -> str | None:
+    if v == "":
+        return None
+    return v
+
+
 class MeetingUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
-    description: str | None = None
+    description: Annotated[str | None, BeforeValidator(_empty_str_to_none)] = None
     tags: list[str] | None = None
 
 

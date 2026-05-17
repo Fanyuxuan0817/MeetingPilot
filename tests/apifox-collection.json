@@ -1,0 +1,1566 @@
+{
+  "info": {
+    "name": "MeetingPilot API 自动化测试",
+    "description": "MeetingPilot 智能会议助手 API 自动化测试集合，导入 Apifox 后可直接运行。包含所有接口的正向/反向测试用例及断言。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000/api/v1" },
+    { "key": "meeting_id", "value": "meet_a7b2c9" },
+    { "key": "chunk_id", "value": "chunk_1001" },
+    { "key": "action_id", "value": "act_501" }
+  ],
+  "item": [
+    {
+      "name": "00 健康检查",
+      "item": [
+        {
+          "name": "健康检查 - GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回 healthy 状态', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.status).to.eql('healthy');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "根路径 - GET /",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": [""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回欢迎信息', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.message).to.include('MeetingPilot');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 会议管理",
+      "item": [
+        {
+          "name": "创建会议 - POST /meetings",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"产品迭代周会\",\n  \"description\": \"讨论本周产品、研发和测试进度\",\n  \"started_at\": \"2026-05-16T10:00:00+08:00\",\n  \"tags\": [\"产品\", \"周会\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/meetings",
+              "host": ["{{base_url}}"],
+              "path": ["meetings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 201', () => pm.response.to.have.status(201));",
+                  "pm.test('返回会议 ID', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.id).to.be.a('string');",
+                  "});",
+                  "pm.test('标题一致', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.title).to.eql('产品迭代周会');",
+                  "});",
+                  "pm.test('状态为 created', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.status).to.eql('created');",
+                  "});",
+                  "pm.test('标签正确', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.tags).to.eql(['产品', '周会']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "创建会议 - 最小数据",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"简短会议\",\n  \"started_at\": \"2026-05-17T09:00:00+08:00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/meetings",
+              "host": ["{{base_url}}"],
+              "path": ["meetings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 201', () => pm.response.to.have.status(201));",
+                  "pm.test('标题一致', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.title).to.eql('简短会议');",
+                  "});",
+                  "pm.test('tags 默认为空数组', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.tags).to.eql([]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "创建会议 - 标题为空(应422)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\",\n  \"started_at\": \"2026-05-17T09:00:00+08:00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/meetings",
+              "host": ["{{base_url}}"],
+              "path": ["meetings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取会议列表 - 默认参数",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings",
+              "host": ["{{base_url}}"],
+              "path": ["meetings"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回分页结构', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('items');",
+                  "  pm.expect(json).to.have.property('total');",
+                  "  pm.expect(json).to.have.property('page');",
+                  "  pm.expect(json).to.have.property('size');",
+                  "});",
+                  "pm.test('items 是数组', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.items).to.be.an('array');",
+                  "});",
+                  "pm.test('total >= 3', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.total).to.be.at.least(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取会议列表 - 关键词搜索",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings?keyword=支付",
+              "host": ["{{base_url}}"],
+              "path": ["meetings"],
+              "query": [{ "key": "keyword", "value": "支付" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('搜索结果包含关键词', () => {",
+                  "  const json = pm.response.json();",
+                  "  json.items.forEach(item => {",
+                  "    pm.expect(item.title).to.include('支付');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取会议列表 - 状态筛选",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings?status=completed",
+              "host": ["{{base_url}}"],
+              "path": ["meetings"],
+              "query": [{ "key": "status", "value": "completed" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('所有结果状态为 completed', () => {",
+                  "  const json = pm.response.json();",
+                  "  json.items.forEach(item => {",
+                  "    pm.expect(item.status).to.eql('completed');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取会议列表 - 标签筛选",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings?tag=产品",
+              "host": ["{{base_url}}"],
+              "path": ["meetings"],
+              "query": [{ "key": "tag", "value": "产品" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('所有结果包含标签', () => {",
+                  "  const json = pm.response.json();",
+                  "  json.items.forEach(item => {",
+                  "    pm.expect(item.tags).to.include('产品');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取会议列表 - 分页",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings?page=2&size=2",
+              "host": ["{{base_url}}"],
+              "path": ["meetings"],
+              "query": [
+                { "key": "page", "value": "2" },
+                { "key": "size", "value": "2" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('分页参数正确', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.page).to.eql(2);",
+                  "  pm.expect(json.size).to.eql(2);",
+                  "  pm.expect(json.items.length).to.be.at.most(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取会议详情 - 存在的会议",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回完整会议信息', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('id');",
+                  "  pm.expect(json).to.have.property('title');",
+                  "  pm.expect(json).to.have.property('description');",
+                  "  pm.expect(json).to.have.property('status');",
+                  "  pm.expect(json).to.have.property('tags');",
+                  "  pm.expect(json).to.have.property('duration');",
+                  "  pm.expect(json).to.have.property('audio_url');",
+                  "  pm.expect(json).to.have.property('language');",
+                  "  pm.expect(json).to.have.property('created_at');",
+                  "});",
+                  "pm.test('ID 一致', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.id).to.eql('meet_a7b2c9');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取会议详情 - 不存在的会议(应404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/meet_not_exist",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "meet_not_exist"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 404', () => pm.response.to.have.status(404));",
+                  "pm.test('错误码为 MEETING_NOT_FOUND', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.detail.code).to.eql('MEETING_NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "更新会议 - 只更新标题",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"产品迭代周会 - 5月版\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('标题已更新', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.title).to.eql('产品迭代周会 - 5月版');",
+                  "});",
+                  "pm.test('其他字段保留', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.description).to.exist;",
+                  "  pm.expect(json.tags).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "更新会议 - 更新标签(完全替换)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tags\": [\"产品\", \"复盘\", \"重要\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('标签已替换', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.tags).to.eql(['产品', '复盘', '重要']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "更新会议 - 清空描述",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('描述已清空', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.description).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "更新会议 - 不存在的会议(应404)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"不存在的会议\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/meetings/meet_not_exist",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "meet_not_exist"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "更新会议 - 标题为空字符串(应422)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "删除会议 - DELETE /meetings/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "上传会议音频 - POST /meetings/upload",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" },
+                { "key": "title", "value": "测试会议", "type": "text" },
+                { "key": "description", "value": "自动化测试上传", "type": "text" },
+                { "key": "language", "value": "zh", "type": "text" },
+                { "key": "enable_speaker_diarization", "value": "true", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/meetings/upload",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "upload"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 202', () => pm.response.to.have.status(202));",
+                  "pm.test('返回任务信息', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('meeting_id');",
+                  "  pm.expect(json).to.have.property('job_id');",
+                  "  pm.expect(json.status).to.eql('running');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "重新转录会议 - POST /meetings/{id}/transcribe",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/transcribe?language=zh&enable_speaker_diarization=true",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "transcribe"],
+              "query": [
+                { "key": "language", "value": "zh" },
+                { "key": "enable_speaker_diarization", "value": "true" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 202', () => pm.response.to.have.status(202));",
+                  "pm.test('返回任务信息', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('job_id');",
+                  "  pm.expect(json.status).to.eql('running');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取会议任务状态 - GET /meetings/{id}/jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/jobs",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "jobs"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回任务列表', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('meeting_id');",
+                  "  pm.expect(json.jobs).to.be.an('array');",
+                  "  pm.expect(json.jobs.length).to.be.at.least(1);",
+                  "});",
+                  "pm.test('任务结构完整', () => {",
+                  "  const json = pm.response.json();",
+                  "  const job = json.jobs[0];",
+                  "  pm.expect(job).to.have.property('id');",
+                  "  pm.expect(job).to.have.property('type');",
+                  "  pm.expect(job).to.have.property('status');",
+                  "  pm.expect(job).to.have.property('progress');",
+                  "  pm.expect(job).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "触发 Agent 分析 - POST /meetings/{id}/agents/run",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agents\": [\"summary\", \"action\", \"memory\", \"graph\", \"conflict\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/agents/run",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "agents", "run"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 202', () => pm.response.to.have.status(202));",
+                  "pm.test('返回任务信息', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('job_id');",
+                  "  pm.expect(json.status).to.eql('running');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 转录接口",
+      "item": [
+        {
+          "name": "获取转录切片 - 全部",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/transcripts",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "transcripts"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回转录结构', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('meeting_id');",
+                  "  pm.expect(json.chunks).to.be.an('array');",
+                  "});",
+                  "pm.test('切片结构完整', () => {",
+                  "  const json = pm.response.json();",
+                  "  const chunk = json.chunks[0];",
+                  "  pm.expect(chunk).to.have.property('id');",
+                  "  pm.expect(chunk).to.have.property('speaker');",
+                  "  pm.expect(chunk).to.have.property('start');",
+                  "  pm.expect(chunk).to.have.property('end');",
+                  "  pm.expect(chunk).to.have.property('content');",
+                  "  pm.expect(chunk).to.have.property('confidence');",
+                  "});",
+                  "pm.test('至少5个切片', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.chunks.length).to.be.at.least(5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取转录切片 - 按说话人筛选",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/transcripts?speaker=张三",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "transcripts"],
+              "query": [{ "key": "speaker", "value": "张三" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('所有切片说话人为张三', () => {",
+                  "  const json = pm.response.json();",
+                  "  json.chunks.forEach(chunk => {",
+                  "    pm.expect(chunk.speaker).to.eql('张三');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取转录切片 - 按关键词搜索",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/transcripts?keyword=支付",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "transcripts"],
+              "query": [{ "key": "keyword", "value": "支付" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('所有切片包含关键词', () => {",
+                  "  const json = pm.response.json();",
+                  "  json.chunks.forEach(chunk => {",
+                  "    pm.expect(chunk.content).to.include('支付');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取单个转录切片",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/transcripts/{{chunk_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["transcripts", "{{chunk_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回切片详情', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('id');",
+                  "  pm.expect(json).to.have.property('meeting_id');",
+                  "  pm.expect(json).to.have.property('speaker');",
+                  "  pm.expect(json).to.have.property('content');",
+                  "  pm.expect(json).to.have.property('confidence');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "更新转录切片 - 只更新说话人",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speaker\": \"王五\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/transcripts/{{chunk_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["transcripts", "{{chunk_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('说话人已更新', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.speaker).to.eql('王五');",
+                  "});",
+                  "pm.test('updated_at 已更新', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.updated_at).to.not.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "更新转录切片 - 同时更新说话人和内容",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speaker\": \"李四\",\n  \"content\": \"支付模块延期到周五完成。\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/transcripts/{{chunk_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["transcripts", "{{chunk_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('说话人和内容已更新', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.speaker).to.eql('李四');",
+                  "  pm.expect(json.content).to.eql('支付模块延期到周五完成。');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 结构化纪要",
+      "item": [
+        {
+          "name": "获取会议纪要",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/summary",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "summary"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回纪要结构', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('meeting_id');",
+                  "  pm.expect(json).to.have.property('summary');",
+                  "  pm.expect(json).to.have.property('generated_at');",
+                  "});",
+                  "pm.test('纪要包含完整字段', () => {",
+                  "  const json = pm.response.json();",
+                  "  const s = json.summary;",
+                  "  pm.expect(s).to.have.property('overview');",
+                  "  pm.expect(s).to.have.property('topics');",
+                  "  pm.expect(s).to.have.property('decisions');",
+                  "  pm.expect(s).to.have.property('risks');",
+                  "  pm.expect(s).to.have.property('open_questions');",
+                  "});",
+                  "pm.test('topics 是数组且不为空', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.summary.topics).to.be.an('array').and.not.be.empty;",
+                  "});",
+                  "pm.test('risks 包含 level 字段', () => {",
+                  "  const json = pm.response.json();",
+                  "  json.summary.risks.forEach(r => {",
+                  "    pm.expect(r).to.have.property('level');",
+                  "    pm.expect(['low', 'medium', 'high']).to.include(r.level);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "重新生成会议纪要",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/summary/generate",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "summary", "generate"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 202', () => pm.response.to.have.status(202));",
+                  "pm.test('返回任务信息', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('job_id');",
+                  "  pm.expect(json.status).to.eql('running');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 待办事项",
+      "item": [
+        {
+          "name": "获取会议待办",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/actions",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "actions"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回待办结构', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('meeting_id');",
+                  "  pm.expect(json.items).to.be.an('array');",
+                  "});",
+                  "pm.test('待办结构完整', () => {",
+                  "  const json = pm.response.json();",
+                  "  const item = json.items[0];",
+                  "  pm.expect(item).to.have.property('id');",
+                  "  pm.expect(item).to.have.property('task');",
+                  "  pm.expect(item).to.have.property('owner');",
+                  "  pm.expect(item).to.have.property('deadline');",
+                  "  pm.expect(item).to.have.property('priority');",
+                  "  pm.expect(item).to.have.property('status');",
+                  "});",
+                  "pm.test('至少3个待办', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.items.length).to.be.at.least(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "创建待办",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task\": \"补充支付回调异常日志\",\n  \"owner\": \"王五\",\n  \"deadline\": \"2026-05-18\",\n  \"priority\": \"medium\",\n  \"source_chunk_id\": \"chunk_1001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/actions",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "actions"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 201', () => pm.response.to.have.status(201));",
+                  "pm.test('返回新建待办', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('id');",
+                  "  pm.expect(json.task).to.eql('补充支付回调异常日志');",
+                  "  pm.expect(json.owner).to.eql('王五');",
+                  "  pm.expect(json.status).to.eql('todo');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "更新待办",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task\": \"补充支付回调异常日志并同步测试\",\n  \"owner\": \"王五\",\n  \"deadline\": \"2026-05-19\",\n  \"priority\": \"high\",\n  \"status\": \"doing\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/actions/{{action_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["actions", "{{action_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('待办已更新', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.status).to.eql('doing');",
+                  "  pm.expect(json.priority).to.eql('high');",
+                  "  pm.expect(json.updated_at).to.not.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "删除待办",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actions/{{action_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["actions", "{{action_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "重新提取待办",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/actions/extract",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "actions", "extract"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 202', () => pm.response.to.have.status(202));",
+                  "pm.test('返回任务信息', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('job_id');",
+                  "  pm.expect(json.status).to.eql('running');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "同步待办到飞书",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actions/{{action_id}}/sync/feishu?target=task&notify_owner=true",
+              "host": ["{{base_url}}"],
+              "path": ["actions", "{{action_id}}", "sync", "feishu"],
+              "query": [
+                { "key": "target", "value": "task" },
+                { "key": "notify_owner", "value": "true" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回同步结果', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('action_id');",
+                  "  pm.expect(json.provider).to.eql('feishu');",
+                  "  pm.expect(json).to.have.property('external_id');",
+                  "  pm.expect(json.status).to.eql('synced');",
+                  "  pm.expect(json).to.have.property('synced_at');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 决策记录",
+      "item": [
+        {
+          "name": "获取会议决策",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/decisions",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "decisions"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回决策结构', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('meeting_id');",
+                  "  pm.expect(json.items).to.be.an('array');",
+                  "});",
+                  "pm.test('决策结构完整', () => {",
+                  "  const json = pm.response.json();",
+                  "  const item = json.items[0];",
+                  "  pm.expect(item).to.have.property('id');",
+                  "  pm.expect(item).to.have.property('topic');",
+                  "  pm.expect(item).to.have.property('decision');",
+                  "  pm.expect(item).to.have.property('version');",
+                  "  pm.expect(item).to.have.property('source_chunk_id');",
+                  "  pm.expect(item).to.have.property('created_at');",
+                  "});",
+                  "pm.test('至少3条决策', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.items.length).to.be.at.least(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取决策冲突",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/conflicts",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "conflicts"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回冲突结构', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('meeting_id');",
+                  "  pm.expect(json.items).to.be.an('array');",
+                  "});",
+                  "pm.test('冲突结构完整', () => {",
+                  "  const json = pm.response.json();",
+                  "  if (json.items.length > 0) {",
+                  "    const item = json.items[0];",
+                  "    pm.expect(item).to.have.property('id');",
+                  "    pm.expect(item).to.have.property('topic');",
+                  "    pm.expect(item).to.have.property('current_decision');",
+                  "    pm.expect(item).to.have.property('previous_decision');",
+                  "    pm.expect(item).to.have.property('level');",
+                  "    pm.expect(['low', 'medium', 'high']).to.include(item.level);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "重新检测决策冲突",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/conflicts/detect",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "conflicts", "detect"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 202', () => pm.response.to.have.status(202));",
+                  "pm.test('返回任务信息', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('job_id');",
+                  "  pm.expect(json.status).to.eql('running');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 智能问答",
+      "item": [
+        {
+          "name": "单次问答 - 延期原因",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meeting_id\": \"meet_a7b2c9\",\n  \"question\": \"支付模块延期是谁提出的？\",\n  \"scope\": \"current_meeting\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/qa",
+              "host": ["{{base_url}}"],
+              "path": ["qa"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回回答和引用', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('answer');",
+                  "  pm.expect(json).to.have.property('citations');",
+                  "  pm.expect(json.answer).to.be.a('string').and.not.be.empty;",
+                  "  pm.expect(json.citations).to.be.an('array');",
+                  "});",
+                  "pm.test('引用结构完整', () => {",
+                  "  const json = pm.response.json();",
+                  "  if (json.citations.length > 0) {",
+                  "    const c = json.citations[0];",
+                  "    pm.expect(c).to.have.property('meeting_id');",
+                  "    pm.expect(c).to.have.property('chunk_id');",
+                  "    pm.expect(c).to.have.property('speaker');",
+                  "    pm.expect(c).to.have.property('text');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "单次问答 - 责任人",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meeting_id\": \"meet_a7b2c9\",\n  \"question\": \"谁负责支付回调修复？\",\n  \"scope\": \"current_meeting\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/qa",
+              "host": ["{{base_url}}"],
+              "path": ["qa"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('回答包含王五', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.answer).to.include('王五');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "单次问答 - 自定义问题",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meeting_id\": \"meet_a7b2c9\",\n  \"question\": \"本次会议讨论了哪些风险？\",\n  \"scope\": \"current_meeting\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/qa",
+              "host": ["{{base_url}}"],
+              "path": ["qa"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回回答', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.answer).to.be.a('string').and.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "跨会议语义检索",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/memory/search?query=支付模块延期之前讨论过吗？&limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["memory", "search"],
+              "query": [
+                { "key": "query", "value": "支付模块延期之前讨论过吗？" },
+                { "key": "limit", "value": "5" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回检索结果', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.items).to.be.an('array');",
+                  "});",
+                  "pm.test('检索结果结构完整', () => {",
+                  "  const json = pm.response.json();",
+                  "  if (json.items.length > 0) {",
+                  "    const item = json.items[0];",
+                  "    pm.expect(item).to.have.property('meeting_id');",
+                  "    pm.expect(item).to.have.property('meeting_title');",
+                  "    pm.expect(item).to.have.property('chunk_id');",
+                  "    pm.expect(item).to.have.property('text');",
+                  "    pm.expect(item).to.have.property('score');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取知识图谱",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/meetings/{{meeting_id}}/graph",
+              "host": ["{{base_url}}"],
+              "path": ["meetings", "{{meeting_id}}", "graph"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回图谱结构', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('nodes');",
+                  "  pm.expect(json).to.have.property('edges');",
+                  "  pm.expect(json.nodes).to.be.an('array');",
+                  "  pm.expect(json.edges).to.be.an('array');",
+                  "});",
+                  "pm.test('节点结构完整', () => {",
+                  "  const json = pm.response.json();",
+                  "  if (json.nodes.length > 0) {",
+                  "    const node = json.nodes[0];",
+                  "    pm.expect(node).to.have.property('id');",
+                  "    pm.expect(node).to.have.property('label');",
+                  "    pm.expect(node).to.have.property('type');",
+                  "    pm.expect(['person', 'task', 'topic']).to.include(node.type);",
+                  "  }",
+                  "});",
+                  "pm.test('边结构完整', () => {",
+                  "  const json = pm.response.json();",
+                  "  if (json.edges.length > 0) {",
+                  "    const edge = json.edges[0];",
+                  "    pm.expect(edge).to.have.property('source');",
+                  "    pm.expect(edge).to.have.property('target');",
+                  "    pm.expect(edge).to.have.property('type');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "图谱查询",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/graph/query?question=最近三次会议张三负责了哪些任务？",
+              "host": ["{{base_url}}"],
+              "path": ["graph", "query"],
+              "query": [{ "key": "question", "value": "最近三次会议张三负责了哪些任务？" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('状态码为 200', () => pm.response.to.have.status(200));",
+                  "pm.test('返回查询结果', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('answer');",
+                  "  pm.expect(json).to.have.property('nodes');",
+                  "  pm.expect(json).to.have.property('edges');",
+                  "  pm.expect(json.answer).to.be.a('string').and.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
