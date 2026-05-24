@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Annotated
@@ -37,7 +38,7 @@ class MeetingUpdate(BaseModel):
 
 
 class MeetingRead(MeetingBase):
-    id: str
+    id: uuid.UUID
     status: MeetingStatus
     duration: float | None = 0.0
     audio_url: str | None = None

@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -14,8 +15,8 @@ class TranscriptChunkUpdate(BaseModel):
 
 
 class TranscriptChunkRead(TranscriptChunkBase):
-    id: str
-    meeting_id: str
+    id: uuid.UUID
+    meeting_id: uuid.UUID
     start: float = Field(ge=0)
     end: float = Field(ge=0)
     confidence: float | None = Field(default=None, ge=0, le=1)
@@ -25,6 +26,6 @@ class TranscriptChunkRead(TranscriptChunkBase):
 
 
 class TranscriptListRead(BaseModel):
-    meeting_id: str
+    meeting_id: uuid.UUID
     chunks: list[TranscriptChunkRead]
 

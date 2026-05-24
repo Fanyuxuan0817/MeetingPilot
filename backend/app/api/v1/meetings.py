@@ -1,8 +1,14 @@
-from datetime import datetime, timedelta
-from typing import Literal
+import os
+import uuid
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Query, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Query, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
+from sqlalchemy.orm import Session
 
+from app.core.config import settings
+from app.core.database import get_db
+from app.models.job import Job
+from app.models.meeting import Meeting
 from app.schemas.meeting import (
     MeetingCreate,
     MeetingRead,
@@ -10,17 +16,19 @@ from app.schemas.meeting import (
     MeetingStatus,
 )
 from app.schemas.common import PaginationResponse, JobResponse, JobStatus
+from app.services.meeting_pipeline import run_transcription_pipeline
 
 router = APIRouter()
 
-# 支持的音频文件类型
 ALLOWED_AUDIO_TYPES = {
-    "audio/mpeg",      # MP3
-    "audio/wav",       # WAV
-    "audio/x-wav",     # WAV (alternative)
-    "audio/mp4",       # M4A
-    "audio/x-m4a",     # M4A (alternative)
+    "audio/mpeg",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/mp4",
+    "audio/x-m4a",
 }
+
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
 
 @router.post("", response_model=MeetingRead, status_code=201)
@@ -41,26 +49,57 @@ async def create_meeting(data: MeetingCreate):
 
 @router.post("/upload", response_model=JobResponse, status_code=202)
 async def upload_meeting(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     title: str = Form(...),
     description: str | None = Form(None),
     language: str | None = Form(None),
     enable_speaker_diarization: bool = Form(True),
+    db: Session = Depends(get_db),
 ):
-    # 验证文件类型（优先检查文件扩展名，防止客户端伪造 Content-Type）
     file_ext = file.filename.lower().split('.')[-1] if '.' in file.filename else ''
-    
+
     if file_ext not in {'mp3', 'wav', 'm4a'}:
         raise HTTPException(
             status_code=415,
             detail=f"不支持的文件格式 '{file_ext}'，请上传 mp3、wav 或 m4a 格式的音频文件"
         )
-    
-    return {
-        "meeting_id": "meet_a7b2c9",
-        "job_id": "job_9x2k1m",
-        "status": JobStatus.RUNNING,
-    }
+
+    meeting_id = uuid.uuid4()
+    audio_path = os.path.join(settings.UPLOAD_DIR, f"{meeting_id}.{file_ext}")
+
+    try:
+        with open(audio_path, "wb") as f:
+            f.write(await file.read())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"文件保存失败: {str(e)}")
+
+    new_meeting = Meeting(
+        id=meeting_id,
+        title=title,
+        description=description,
+        status="uploading",
+        audio_url=f"/storage/audio/{meeting_id}.{file_ext}",
+        language=language,
+        started_at=datetime.now(timezone.utc),
+    )
+    db.add(new_meeting)
+
+    new_job = Job(
+        meeting_id=meeting_id,
+        status="pending",
+    )
+    db.add(new_job)
+    db.commit()
+    db.refresh(new_job)
+
+    background_tasks.add_task(run_transcription_pipeline, meeting_id, audio_path)
+
+    return JobResponse(
+        meeting_id=str(meeting_id),
+        job_id=str(new_job.id),
+        status=JobStatus.RUNNING,
+    )
 
 
 @router.get("", response_model=PaginationResponse[MeetingRead])
