@@ -6,13 +6,13 @@ import type {
 } from '@/types'
 
 export function getMeetingDecisions(meetingId: string) {
-  return apiClient.get<DecisionListResponse>(`/meetings/${meetingId}/decisions`)
+  return apiClient.get<DecisionListResponse>(`/meetings/${meetingId}/decisions`).then((res: any) => res as DecisionListResponse)
 }
 
 export function getMeetingConflicts(meetingId: string) {
-  return apiClient.get<ConflictListResponse>(`/meetings/${meetingId}/conflicts`)
+  return apiClient.get<ConflictListResponse>(`/meetings/${meetingId}/conflicts`).then((res: any) => res as ConflictListResponse)
 }
 
 export function detectConflicts(meetingId: string) {
-  return apiClient.post<JobResponse>(`/meetings/${meetingId}/conflicts/detect`)
+  return apiClient.post<JobResponse>(`/meetings/${meetingId}/conflicts/detect`).then((res: any) => res as JobResponse)
 }

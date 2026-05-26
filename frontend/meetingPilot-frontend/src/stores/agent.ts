@@ -56,7 +56,7 @@ export const useAgentStore = defineStore('agent', () => {
     isSummaryLoading.value = true
     error.value = null
     try {
-      const res = await getMeetingSummary(meetingId) as SummaryRead
+      const res = await getMeetingSummary(meetingId)
       summary.value = res
       return res
     } catch (err) {
@@ -70,7 +70,7 @@ export const useAgentStore = defineStore('agent', () => {
   async function generateSummary(meetingId: string) {
     error.value = null
     try {
-      return await generateMeetingSummary(meetingId) as Promise<JobResponse>
+      return await generateMeetingSummary(meetingId)
     } catch (err) {
       error.value = err
       throw err
@@ -81,7 +81,7 @@ export const useAgentStore = defineStore('agent', () => {
     isActionsLoading.value = true
     error.value = null
     try {
-      const res = await getMeetingActions(meetingId) as ActionListResponse
+      const res = await getMeetingActions(meetingId)
       actions.value = res.items
       return res
     } catch (err) {
@@ -95,7 +95,7 @@ export const useAgentStore = defineStore('agent', () => {
   async function addAction(meetingId: string, data: ActionItemCreate) {
     error.value = null
     try {
-      const res = await createAction(meetingId, data) as ActionItemRead
+      const res = await createAction(meetingId, data)
       actions.value.push(res)
       return res
     } catch (err) {
@@ -107,7 +107,7 @@ export const useAgentStore = defineStore('agent', () => {
   async function editAction(actionId: string, data: ActionItemUpdate) {
     error.value = null
     try {
-      const res = await updateAction(actionId, data) as ActionItemRead
+      const res = await updateAction(actionId, data)
       const idx = actions.value.findIndex((a) => a.id === actionId)
       if (idx !== -1) actions.value[idx] = res
       return res
@@ -131,7 +131,7 @@ export const useAgentStore = defineStore('agent', () => {
   async function triggerExtractActions(meetingId: string) {
     error.value = null
     try {
-      return await extractActions(meetingId) as Promise<JobResponse>
+      return await extractActions(meetingId)
     } catch (err) {
       error.value = err
       throw err
@@ -152,7 +152,7 @@ export const useAgentStore = defineStore('agent', () => {
     isDecisionsLoading.value = true
     error.value = null
     try {
-      const res = await getMeetingDecisions(meetingId) as DecisionListResponse
+      const res = await getMeetingDecisions(meetingId)
       decisions.value = res.items
       return res
     } catch (err) {
@@ -167,7 +167,7 @@ export const useAgentStore = defineStore('agent', () => {
     isConflictsLoading.value = true
     error.value = null
     try {
-      const res = await getMeetingConflicts(meetingId) as ConflictListResponse
+      const res = await getMeetingConflicts(meetingId)
       conflicts.value = res.items
       return res
     } catch (err) {
@@ -181,7 +181,7 @@ export const useAgentStore = defineStore('agent', () => {
   async function triggerDetectConflicts(meetingId: string) {
     error.value = null
     try {
-      return await detectConflicts(meetingId) as Promise<JobResponse>
+      return await detectConflicts(meetingId)
     } catch (err) {
       error.value = err
       throw err

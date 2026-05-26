@@ -1,13 +1,12 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import type WaveSurfer from 'wavesurfer.js'
 import type {
   MeetingRead,
   MeetingCreate,
   MeetingUpdate,
   TranscriptChunkRead,
-  PaginationResponse,
-  JobResponse,
-  MeetingJobsResponse,
+  TranscriptListRead,
 } from '@/types'
 import {
   listMeetings,
@@ -32,6 +31,7 @@ export const useMeetingStore = defineStore('meeting', () => {
   const error = ref<unknown>(null)
   const pagination = ref({ total: 0, page: 1, size: 20 })
   const filters = ref<ListMeetingsParams>({})
+  const waveSurfer = ref<WaveSurfer | null>(null)
 
   const meetingCount = computed(() => pagination.value.total)
 
@@ -49,7 +49,7 @@ export const useMeetingStore = defineStore('meeting', () => {
     error.value = null
     try {
       const params = overrideParams ?? filters.value
-      const res = await listMeetings(params) as PaginationResponse<MeetingRead>
+      const res = await listMeetings(params)
       meetings.value = res.items
       pagination.value.total = res.total
       pagination.value.page = res.page
@@ -67,8 +67,8 @@ export const useMeetingStore = defineStore('meeting', () => {
     error.value = null
     try {
       const [meetingData, transcriptData] = await Promise.all([
-        getMeeting(id) as Promise<MeetingRead>,
-        getMeetingTranscripts(id) as Promise<{ meeting_id: string; chunks: TranscriptChunkRead[] }>,
+        getMeeting(id),
+        getMeetingTranscripts(id),
       ])
       currentMeeting.value = meetingData
       transcripts.value = transcriptData.chunks
@@ -83,7 +83,7 @@ export const useMeetingStore = defineStore('meeting', () => {
   async function addMeeting(data: MeetingCreate) {
     error.value = null
     try {
-      const res = await createMeeting(data) as MeetingRead
+      const res = await createMeeting(data)
       meetings.value.unshift(res)
       return res
     } catch (err) {
@@ -95,7 +95,7 @@ export const useMeetingStore = defineStore('meeting', () => {
   async function editMeeting(meetingId: string, data: MeetingUpdate) {
     error.value = null
     try {
-      const res = await updateMeeting(meetingId, data) as MeetingRead
+      const res = await updateMeeting(meetingId, data)
       if (currentMeeting.value?.id === meetingId) {
         currentMeeting.value = res
       }
@@ -126,7 +126,7 @@ export const useMeetingStore = defineStore('meeting', () => {
   async function uploadAudio(params: UploadMeetingParams) {
     error.value = null
     try {
-      return await uploadMeeting(params) as Promise<JobResponse>
+      return await uploadMeeting(params)
     } catch (err) {
       error.value = err
       throw err
@@ -136,7 +136,7 @@ export const useMeetingStore = defineStore('meeting', () => {
   async function fetchMeetingJobs(meetingId: string) {
     error.value = null
     try {
-      return await getMeetingJobs(meetingId) as Promise<MeetingJobsResponse>
+      return await getMeetingJobs(meetingId)
     } catch (err) {
       error.value = err
       throw err
@@ -146,7 +146,7 @@ export const useMeetingStore = defineStore('meeting', () => {
   async function triggerAgents(meetingId: string, params?: RunAgentsParams) {
     error.value = null
     try {
-      return await runAgents(meetingId, params) as Promise<JobResponse>
+      return await runAgents(meetingId, params)
     } catch (err) {
       error.value = err
       throw err
@@ -159,6 +159,10 @@ export const useMeetingStore = defineStore('meeting', () => {
 
   function setPlaying(playing: boolean) {
     isPlaying.value = playing
+  }
+
+  function setWaveSurfer(ws: WaveSurfer | null) {
+    waveSurfer.value = ws
   }
 
   function setFilters(newFilters: ListMeetingsParams) {
@@ -176,6 +180,7 @@ export const useMeetingStore = defineStore('meeting', () => {
     error,
     pagination,
     filters,
+    waveSurfer,
     meetingCount,
     activeFilters,
     clearError,
@@ -189,6 +194,7 @@ export const useMeetingStore = defineStore('meeting', () => {
     triggerAgents,
     updateCurrentTime,
     setPlaying,
+    setWaveSurfer,
     setFilters,
   }
 })

@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { type AxiosResponse } from 'axios'
 import { ElMessage } from 'element-plus'
 
 const apiClient = axios.create({
@@ -23,8 +23,8 @@ apiClient.interceptors.request.use(
 )
 
 apiClient.interceptors.response.use(
-  (response) => {
-    return response.data
+  (response: AxiosResponse) => {
+    return response.data as any
   },
   (error) => {
     if (error.response) {

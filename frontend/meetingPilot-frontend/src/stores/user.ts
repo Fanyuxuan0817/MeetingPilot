@@ -38,8 +38,4 @@ export const useUserStore = defineStore('user', () => {
     logout,
     loadProfile,
   }
-}, {
-  persist: {
-    pick: ['token'],
-  },
 })

@@ -9,7 +9,7 @@
         :id="`chunk-${chunk.id}`"
         :key="chunk.id"
         class="chunk-item px-3 py-2 rounded-lg cursor-pointer transition-colors duration-200"
-        :class="activeId === chunk.id
+        :class="activeChunkId === chunk.id
           ? 'bg-secondary-100 border-l-3 border-secondary-500'
           : 'hover:bg-soft-cream'"
         @click="handleClick(chunk)"
@@ -31,29 +31,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
 import { useMeetingStore } from '@/stores/meeting'
-import { useWaveSurfer } from '@/composables/useWaveSurfer'
+import { useTranscriptHighlight } from '@/composables/useTranscriptHighlight'
+import { useAudioPlayer } from '@/composables/useAudioPlayer'
 import type { TranscriptChunkRead } from '@/types'
 
 const store = useMeetingStore()
-const { seekTo } = useWaveSurfer()
-
-const activeId = computed(() => {
-  const found = store.transcripts.find(
-    (chunk) => store.currentTime >= chunk.start && store.currentTime <= chunk.end,
-  )
-  return found?.id
-})
-
-watch(activeId, (newId) => {
-  if (newId) {
-    const el = document.getElementById(`chunk-${newId}`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
-})
+const { activeChunkId, highlightChunk } = useTranscriptHighlight()
+const { seekTo } = useAudioPlayer()
 
 function handleClick(chunk: TranscriptChunkRead) {
+  highlightChunk(chunk.id)
   seekTo(chunk.start)
 }
 

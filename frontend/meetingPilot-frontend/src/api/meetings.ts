@@ -35,7 +35,7 @@ export interface RunAgentsParams {
 }
 
 export function createMeeting(data: MeetingCreate) {
-  return apiClient.post<MeetingRead>('/meetings', data)
+  return apiClient.post<MeetingRead>('/meetings', data).then((res: any) => res as MeetingRead)
 }
 
 export function uploadMeeting(params: UploadMeetingParams) {
@@ -52,19 +52,19 @@ export function uploadMeeting(params: UploadMeetingParams) {
 
   return apiClient.post<JobResponse>('/meetings/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  }).then((res: any) => res as JobResponse)
 }
 
 export function listMeetings(params?: ListMeetingsParams) {
-  return apiClient.get<PaginationResponse<MeetingRead>>('/meetings', { params })
+  return apiClient.get<PaginationResponse<MeetingRead>>('/meetings', { params }).then((res: any) => res as PaginationResponse<MeetingRead>)
 }
 
 export function getMeeting(meetingId: string) {
-  return apiClient.get<MeetingRead>(`/meetings/${meetingId}`)
+  return apiClient.get<MeetingRead>(`/meetings/${meetingId}`).then((res: any) => res as MeetingRead)
 }
 
 export function updateMeeting(meetingId: string, data: MeetingUpdate) {
-  return apiClient.patch<MeetingRead>(`/meetings/${meetingId}`, data)
+  return apiClient.patch<MeetingRead>(`/meetings/${meetingId}`, data).then((res: any) => res as MeetingRead)
 }
 
 export function deleteMeeting(meetingId: string) {
@@ -72,13 +72,13 @@ export function deleteMeeting(meetingId: string) {
 }
 
 export function retranscribeMeeting(meetingId: string, params?: RetranscribeParams) {
-  return apiClient.post<JobResponse>(`/meetings/${meetingId}/transcribe`, null, { params })
+  return apiClient.post<JobResponse>(`/meetings/${meetingId}/transcribe`, null, { params }).then((res: any) => res as JobResponse)
 }
 
 export function getMeetingJobs(meetingId: string) {
-  return apiClient.get<MeetingJobsResponse>(`/meetings/${meetingId}/jobs`)
+  return apiClient.get<MeetingJobsResponse>(`/meetings/${meetingId}/jobs`).then((res: any) => res as MeetingJobsResponse)
 }
 
 export function runAgents(meetingId: string, params?: RunAgentsParams) {
-  return apiClient.post<JobResponse>(`/meetings/${meetingId}/agents/run`, params ?? {})
+  return apiClient.post<JobResponse>(`/meetings/${meetingId}/agents/run`, params ?? {}).then((res: any) => res as JobResponse)
 }

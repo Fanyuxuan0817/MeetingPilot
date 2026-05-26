@@ -3,6 +3,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useMeetingStore } from '@/stores/meeting'
 import * as meetingsApi from '@/api/meetings'
 import * as transcriptsApi from '@/api/transcripts'
+import { MeetingStatus } from '@/types'
 
 vi.mock('@/api/meetings')
 vi.mock('@/api/transcripts')
@@ -48,7 +49,7 @@ describe('useMeetingStore', () => {
 
     it('activeFilters returns true when status is set', () => {
       const store = useMeetingStore()
-      store.$patch({ filters: { status: 'completed' } })
+      store.$patch({ filters: { status: MeetingStatus.COMPLETED } })
       expect(store.activeFilters).toBe(true)
     })
 
@@ -78,7 +79,7 @@ describe('useMeetingStore', () => {
   describe('loadMeetings', () => {
     it('updates meetings and pagination on success', async () => {
       const mockData = {
-        items: [{ id: '1', title: 'Test', status: 'completed', created_at: '', updated_at: '' }],
+        items: [{ id: '1', title: 'Test', status: MeetingStatus.COMPLETED, created_at: '', updated_at: '' }],
         total: 1,
         page: 1,
         size: 20,
@@ -133,7 +134,7 @@ describe('useMeetingStore', () => {
 
   describe('loadMeetingData', () => {
     it('loads meeting and transcripts concurrently', async () => {
-      const mockMeeting = { id: '1', title: 'Test', status: 'completed', created_at: '', updated_at: '' }
+      const mockMeeting = { id: '1', title: 'Test', status: MeetingStatus.COMPLETED, created_at: '', updated_at: '' }
       const mockTranscripts = { meeting_id: '1', chunks: [{ id: 'c1', start: 0, end: 5, text: 'hello', speaker: 'A' }] }
 
       vi.mocked(meetingsApi.getMeeting).mockResolvedValue(mockMeeting as any)
@@ -160,7 +161,7 @@ describe('useMeetingStore', () => {
 
   describe('addMeeting', () => {
     it('adds meeting to list on success', async () => {
-      const newMeeting = { id: '1', title: 'New', status: 'pending', created_at: '', updated_at: '' }
+      const newMeeting = { id: '1', title: 'New', status: MeetingStatus.CREATED, created_at: '', updated_at: '' }
       vi.mocked(meetingsApi.createMeeting).mockResolvedValue(newMeeting as any)
 
       const store = useMeetingStore()
@@ -211,7 +212,7 @@ describe('useMeetingStore', () => {
 
   describe('editMeeting', () => {
     it('updates meeting in list and currentMeeting', async () => {
-      const updated = { id: '1', title: 'Updated', status: 'completed', created_at: '', updated_at: '' }
+      const updated = { id: '1', title: 'Updated', status: MeetingStatus.COMPLETED, created_at: '', updated_at: '' }
       vi.mocked(meetingsApi.updateMeeting).mockResolvedValue(updated as any)
 
       const store = useMeetingStore()
@@ -222,7 +223,7 @@ describe('useMeetingStore', () => {
 
       await store.editMeeting('1', { title: 'Updated' } as any)
 
-      expect(store.meetings[0].title).toBe('Updated')
+      expect(store.meetings[0]!.title).toBe('Updated')
       expect(store.currentMeeting?.title).toBe('Updated')
     })
   })

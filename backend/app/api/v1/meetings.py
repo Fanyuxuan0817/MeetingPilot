@@ -3,12 +3,12 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Query, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.job import Job
-from app.models.meeting import Meeting
+from app.models.meeting import Meeting, MeetingTag
 from app.schemas.meeting import (
     MeetingCreate,
     MeetingRead,
@@ -31,20 +31,36 @@ ALLOWED_AUDIO_TYPES = {
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
 
-@router.post("", response_model=MeetingRead, status_code=201)
-async def create_meeting(data: MeetingCreate):
+def _meeting_to_read(meeting: Meeting) -> dict:
     return {
-        "id": "meet_a7b2c9",
-        "title": data.title,
-        "description": data.description,
-        "status": MeetingStatus.CREATED,
-        "tags": data.tags or [],
-        "duration": 0.0,
-        "audio_url": None,
-        "language": None,
-        "created_at": datetime.now(),
-        "updated_at": None,
+        "id": meeting.id,
+        "title": meeting.title,
+        "description": meeting.description,
+        "status": meeting.status,
+        "tags": [t.tag for t in meeting.tags],
+        "duration": meeting.duration,
+        "audio_url": meeting.audio_url,
+        "language": meeting.language,
+        "created_at": meeting.created_at,
+        "updated_at": meeting.updated_at,
     }
+
+
+@router.post("", response_model=MeetingRead, status_code=201)
+async def create_meeting(data: MeetingCreate, db: Session = Depends(get_db)):
+    new_meeting = Meeting(
+        title=data.title,
+        description=data.description,
+        status=MeetingStatus.CREATED,
+        started_at=data.started_at,
+    )
+    if data.tags:
+        for tag in data.tags:
+            new_meeting.tags.append(MeetingTag(tag=tag))
+    db.add(new_meeting)
+    db.commit()
+    db.refresh(new_meeting)
+    return _meeting_to_read(new_meeting)
 
 
 @router.post("/upload", response_model=JobResponse, status_code=202)
@@ -109,191 +125,95 @@ async def list_meetings(
     keyword: str | None = Query(None),
     status: MeetingStatus | None = Query(None),
     tag: str | None = Query(None),
+    db: Session = Depends(get_db),
 ):
-    mock_meetings = [
-        {
-            "id": "meet_a7b2c9",
-            "title": "产品迭代周会",
-            "description": "讨论本周产品、研发和测试进度",
-            "status": MeetingStatus.COMPLETED,
-            "tags": ["产品", "周会"],
-            "duration": 3600.5,
-            "audio_url": "/storage/audio/meet_a7b2c9.mp3",
-            "language": "zh",
-            "created_at": datetime.now() - timedelta(days=1),
-            "updated_at": datetime.now(),
-        },
-        {
-            "id": "meet_b8c1d2",
-            "title": "支付系统技术评审",
-            "description": "支付回调问题排查",
-            "status": MeetingStatus.COMPLETED,
-            "tags": ["技术", "支付"],
-            "duration": 2400.0,
-            "audio_url": "/storage/audio/meet_b8c1d2.mp3",
-            "language": "zh",
-            "created_at": datetime.now() - timedelta(days=3),
-            "updated_at": datetime.now() - timedelta(days=3),
-        },
-        {
-            "id": "meet_c3d4e5",
-            "title": "Q3 产品规划会",
-            "description": "讨论 Q3 产品路线图",
-            "status": MeetingStatus.TRANSCRIBING,
-            "tags": ["产品", "规划"],
-            "duration": 0.0,
-            "audio_url": "/storage/audio/meet_c3d4e5.mp3",
-            "language": "zh",
-            "created_at": datetime.now() - timedelta(hours=2),
-            "updated_at": datetime.now() - timedelta(hours=2),
-        },
-    ]
-    
-    filtered = mock_meetings
+    query = db.query(Meeting).filter(Meeting.deleted_at.is_(None))
+
     if keyword:
-        filtered = [m for m in filtered if keyword in m["title"]]
+        query = query.filter(Meeting.title.ilike(f"%{keyword}%"))
     if status:
-        filtered = [m for m in filtered if m["status"] == status]
+        query = query.filter(Meeting.status == status)
     if tag:
-        filtered = [m for m in filtered if tag in m["tags"]]
-    
-    start = (page - 1) * size
-    end = start + size
-    items = filtered[start:end]
-    
+        query = query.join(MeetingTag).filter(MeetingTag.tag == tag)
+
+    total = query.count()
+    items = (
+        query.order_by(Meeting.created_at.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
+
     return {
-        "items": items,
-        "total": len(filtered),
+        "items": [_meeting_to_read(m) for m in items],
+        "total": total,
         "page": page,
         "size": size,
     }
 
 
 @router.get("/{meeting_id}", response_model=MeetingRead)
-async def get_meeting(meeting_id: str):
-    # Mock 数据：只返回已知的会议ID，其他返回404
-    mock_meetings = {
-        "meet_a7b2c9": {
-            "id": "meet_a7b2c9",
-            "title": "产品迭代周会",
-            "description": "讨论本周产品、研发和测试进度",
-            "status": MeetingStatus.COMPLETED,
-            "tags": ["产品", "周会"],
-            "duration": 3600.5,
-            "audio_url": "/storage/audio/meet_a7b2c9.mp3",
-            "language": "zh",
-            "created_at": datetime.now() - timedelta(days=1),
-            "updated_at": datetime.now(),
-        },
-        "meet_b8c1d2": {
-            "id": "meet_b8c1d2",
-            "title": "支付系统技术评审",
-            "description": "支付回调问题排查",
-            "status": MeetingStatus.COMPLETED,
-            "tags": ["技术", "支付"],
-            "duration": 2400.0,
-            "audio_url": "/storage/audio/meet_b8c1d2.mp3",
-            "language": "zh",
-            "created_at": datetime.now() - timedelta(days=3),
-            "updated_at": datetime.now() - timedelta(days=3),
-        },
-        "meet_c3d4e5": {
-            "id": "meet_c3d4e5",
-            "title": "Q3 产品规划会",
-            "description": "讨论 Q3 产品路线图",
-            "status": MeetingStatus.TRANSCRIBING,
-            "tags": ["产品", "规划"],
-            "duration": 0.0,
-            "audio_url": "/storage/audio/meet_c3d4e5.mp3",
-            "language": "zh",
-            "created_at": datetime.now() - timedelta(hours=2),
-            "updated_at": datetime.now() - timedelta(hours=2),
-        },
-    }
+async def get_meeting(meeting_id: str, db: Session = Depends(get_db)):
+    try:
+        mid = uuid.UUID(meeting_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="无效的会议ID格式")
 
-    if meeting_id not in mock_meetings:
-        from fastapi import HTTPException
+    meeting = db.query(Meeting).filter(Meeting.id == mid, Meeting.deleted_at.is_(None)).first()
+    if not meeting:
         raise HTTPException(status_code=404, detail={
             "code": "MEETING_NOT_FOUND",
             "message": "会议不存在",
             "details": {"meeting_id": meeting_id}
         })
 
-    return mock_meetings[meeting_id]
+    return _meeting_to_read(meeting)
 
 
 @router.patch("/{meeting_id}", response_model=MeetingRead)
-async def update_meeting(meeting_id: str, data: MeetingUpdate):
-    # 检查会议是否存在
-    mock_meetings = {
-        "meet_a7b2c9": {
-            "id": "meet_a7b2c9",
-            "title": "产品迭代周会",
-            "description": "讨论本周产品、研发和测试进度",
-            "status": MeetingStatus.COMPLETED,
-            "tags": ["产品", "周会"],
-            "duration": 3600.5,
-            "audio_url": "/storage/audio/meet_a7b2c9.mp3",
-            "language": "zh",
-            "created_at": datetime.now() - timedelta(days=1),
-            "updated_at": datetime.now(),
-        },
-        "meet_b8c1d2": {
-            "id": "meet_b8c1d2",
-            "title": "支付系统技术评审",
-            "description": "支付回调问题排查",
-            "status": MeetingStatus.COMPLETED,
-            "tags": ["技术", "支付"],
-            "duration": 2400.0,
-            "audio_url": "/storage/audio/meet_b8c1d2.mp3",
-            "language": "zh",
-            "created_at": datetime.now() - timedelta(days=3),
-            "updated_at": datetime.now() - timedelta(days=3),
-        },
-        "meet_c3d4e5": {
-            "id": "meet_c3d4e5",
-            "title": "Q3 产品规划会",
-            "description": "讨论 Q3 产品路线图",
-            "status": MeetingStatus.TRANSCRIBING,
-            "tags": ["产品", "规划"],
-            "duration": 0.0,
-            "audio_url": "/storage/audio/meet_c3d4e5.mp3",
-            "language": "zh",
-            "created_at": datetime.now() - timedelta(hours=2),
-            "updated_at": datetime.now() - timedelta(hours=2),
-        },
-    }
+async def update_meeting(meeting_id: str, data: MeetingUpdate, db: Session = Depends(get_db)):
+    try:
+        mid = uuid.UUID(meeting_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="无效的会议ID格式")
 
-    if meeting_id not in mock_meetings:
-        from fastapi import HTTPException
+    meeting = db.query(Meeting).filter(Meeting.id == mid, Meeting.deleted_at.is_(None)).first()
+    if not meeting:
         raise HTTPException(status_code=404, detail={
             "code": "MEETING_NOT_FOUND",
             "message": "会议不存在",
             "details": {"meeting_id": meeting_id}
         })
 
-    original = mock_meetings[meeting_id]
     updated_fields = data.model_fields_set
 
-    # 区分"用户没传"和"用户传了null想清空"
-    # model_fields_set 包含用户实际传入的字段名
-    # 如果字段在 model_fields_set 中，说明用户显式传了值（包括null）
-    # 如果字段不在 model_fields_set 中，说明用户没传，保留原值
-    result = dict(original)
-    result["updated_at"] = datetime.now()
-
-    if "title" in updated_fields:
-        result["title"] = data.title
+    if "title" in updated_fields and data.title is not None:
+        meeting.title = data.title
     if "description" in updated_fields:
-        result["description"] = data.description
-    if "tags" in updated_fields:
-        result["tags"] = data.tags
+        meeting.description = data.description
+    if "tags" in updated_fields and data.tags is not None:
+        meeting.tags = [MeetingTag(tag=t) for t in data.tags]
 
-    return result
+    db.commit()
+    db.refresh(meeting)
+
+    return _meeting_to_read(meeting)
 
 
 @router.delete("/{meeting_id}", status_code=204)
-async def delete_meeting(meeting_id: str):
+async def delete_meeting(meeting_id: str, db: Session = Depends(get_db)):
+    try:
+        mid = uuid.UUID(meeting_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="无效的会议ID格式")
+
+    meeting = db.query(Meeting).filter(Meeting.id == mid, Meeting.deleted_at.is_(None)).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="会议不存在")
+
+    meeting.deleted_at = datetime.now(timezone.utc)
+    db.commit()
+
     return None
 
 
@@ -302,33 +222,62 @@ async def retranscribe_meeting(
     meeting_id: str,
     language: str | None = None,
     enable_speaker_diarization: bool = True,
+    db: Session = Depends(get_db),
 ):
-    return {
-        "meeting_id": meeting_id,
-        "job_id": "job_8m3p2x",
-        "status": JobStatus.RUNNING,
-    }
+    try:
+        mid = uuid.UUID(meeting_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="无效的会议ID格式")
+
+    meeting = db.query(Meeting).filter(Meeting.id == mid, Meeting.deleted_at.is_(None)).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="会议不存在")
+
+    if not meeting.audio_url:
+        raise HTTPException(status_code=400, detail="该会议没有音频文件，无法重新转录")
+
+    new_job = Job(meeting_id=mid, status="pending")
+    db.add(new_job)
+    meeting.status = MeetingStatus.TRANSCRIBING
+    db.commit()
+    db.refresh(new_job)
+
+    audio_path = os.path.join(settings.UPLOAD_DIR, meeting.audio_url.split("/")[-1])
+    from app.services.meeting_pipeline import run_transcription_pipeline
+    background_tasks = BackgroundTasks()
+    background_tasks.add_task(run_transcription_pipeline, mid, audio_path)
+
+    return JobResponse(
+        meeting_id=str(mid),
+        job_id=str(new_job.id),
+        status=JobStatus.RUNNING,
+    )
 
 
 @router.get("/{meeting_id}/jobs")
-async def get_meeting_jobs(meeting_id: str):
+async def get_meeting_jobs(meeting_id: str, db: Session = Depends(get_db)):
+    try:
+        mid = uuid.UUID(meeting_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="无效的会议ID格式")
+
+    meeting = db.query(Meeting).filter(Meeting.id == mid, Meeting.deleted_at.is_(None)).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="会议不存在")
+
+    jobs = db.query(Job).filter(Job.meeting_id == mid).order_by(Job.created_at.desc()).all()
+
     return {
         "meeting_id": meeting_id,
         "jobs": [
             {
-                "id": "job_9x2k1m",
+                "id": str(job.id),
                 "type": "transcription",
-                "status": "completed",
-                "progress": 100,
-                "message": "转录完成",
-            },
-            {
-                "id": "job_s7k20d",
-                "type": "summary",
-                "status": "running",
-                "progress": 60,
-                "message": "正在生成结构化纪要",
-            },
+                "status": job.status,
+                "progress": 100 if job.status == "completed" else 0,
+                "message": "转录完成" if job.status == "completed" else "处理中",
+            }
+            for job in jobs
         ],
     }
 

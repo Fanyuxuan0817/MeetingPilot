@@ -28,6 +28,10 @@ async def get_meeting_transcripts(
     except ValueError:
         raise HTTPException(status_code=400, detail="无效的会议ID格式")
 
+    meeting = db.query(Meeting).filter(Meeting.id == meeting_uuid).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="会议不存在")
+
     chunks = (
         db.query(TranscriptChunk)
         .filter(TranscriptChunk.meeting_id == meeting_uuid)
@@ -36,9 +40,6 @@ async def get_meeting_transcripts(
     )
 
     if not chunks:
-        meeting = db.query(Meeting).filter(Meeting.id == meeting_uuid).first()
-        if not meeting:
-            raise HTTPException(status_code=404, detail="会议不存在")
         if meeting.status in ("uploading", "transcribing"):
             return TranscriptListRead(meeting_id=meeting_uuid, chunks=[])
         raise HTTPException(status_code=404, detail="未找到该会议的转录内容")
@@ -53,28 +54,43 @@ async def get_meeting_transcripts(
 
 
 @router.get("/transcripts/{chunk_id}", response_model=TranscriptChunkRead)
-async def get_transcript_chunk(chunk_id: str):
-    return {
-        "id": chunk_id,
-        "meeting_id": "meet_a7b2c9",
-        "speaker": "张三",
-        "start": 0.0,
-        "end": 4.25,
-        "content": "大家好，今天主要对齐一下支付模块的延期问题。",
-        "confidence": 0.96,
-        "updated_at": None,
-    }
+async def get_transcript_chunk(
+    chunk_id: str,
+    db: Session = Depends(get_db),
+):
+    try:
+        cid = uuid.UUID(chunk_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="无效的切片ID格式")
+
+    chunk = db.query(TranscriptChunk).filter(TranscriptChunk.id == cid).first()
+    if not chunk:
+        raise HTTPException(status_code=404, detail="转录切片不存在")
+
+    return chunk
 
 
 @router.patch("/transcripts/{chunk_id}", response_model=TranscriptChunkRead)
-async def update_transcript_chunk(chunk_id: str, data: TranscriptChunkUpdate):
-    return {
-        "id": chunk_id,
-        "meeting_id": "meet_a7b2c9",
-        "speaker": data.speaker or "李四",
-        "start": 0.0,
-        "end": 4.25,
-        "content": data.content or "支付模块延期到周五。",
-        "confidence": 0.96,
-        "updated_at": datetime.now(),
-    }
+async def update_transcript_chunk(
+    chunk_id: str,
+    data: TranscriptChunkUpdate,
+    db: Session = Depends(get_db),
+):
+    try:
+        cid = uuid.UUID(chunk_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="无效的切片ID格式")
+
+    chunk = db.query(TranscriptChunk).filter(TranscriptChunk.id == cid).first()
+    if not chunk:
+        raise HTTPException(status_code=404, detail="转录切片不存在")
+
+    if data.speaker is not None:
+        chunk.speaker = data.speaker
+    if data.content is not None:
+        chunk.content = data.content
+
+    db.commit()
+    db.refresh(chunk)
+
+    return chunk

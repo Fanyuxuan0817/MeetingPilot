@@ -31,11 +31,11 @@ import { ref } from 'vue'
 import Waveform from '@/components/audio/Waveform.vue'
 import TranscriptList from '@/components/transcript/TranscriptList.vue'
 import { useMeetingStore } from '@/stores/meeting'
-import { useWaveSurfer } from '@/composables/useWaveSurfer'
+import { useAudioPlayer } from '@/composables/useAudioPlayer'
 import type { TranscriptChunkRead } from '@/types'
 
 const store = useMeetingStore()
-const { destroy } = useWaveSurfer()
+const { destroy } = useAudioPlayer()
 
 const audioUrl = ref('https://cdn.freesound.org/previews/612/612095_5674468-lq.mp3')
 

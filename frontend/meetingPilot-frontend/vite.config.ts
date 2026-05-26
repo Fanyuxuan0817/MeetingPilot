@@ -25,4 +25,26 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/storage': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
+  },
+  optimizeDeps: {
+    include: [
+      'element-plus/es/components/dropdown/style/css',
+      'element-plus/es/components/dropdown-menu/style/css',
+      'element-plus/es/components/dropdown-item/style/css',
+      'element-plus/es/components/checkbox/style/css',
+      'element-plus/es/components/loading/style/css',
+      'element-plus/es/components/button/style/css',
+    ],
+  },
 })

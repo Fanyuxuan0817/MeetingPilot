@@ -51,8 +51,8 @@ describe('useAgentStore', () => {
       const store = useAgentStore()
       store.$patch({
         actions: [
-          { id: '1', status: ActionStatus.PENDING } as any,
-          { id: '2', status: ActionStatus.IN_PROGRESS } as any,
+          { id: '1', status: ActionStatus.TODO } as any,
+          { id: '2', status: ActionStatus.DOING } as any,
           { id: '3', status: ActionStatus.DONE } as any,
           { id: '4', status: ActionStatus.CANCELED } as any,
         ],
@@ -79,7 +79,7 @@ describe('useAgentStore', () => {
 
       store.updateLastAssistantMessage(' world')
 
-      expect(store.chatMessages[1].content).toBe('Hello world')
+      expect(store.chatMessages[1]!.content).toBe('Hello world')
     })
 
     it('updateLastAssistantMessage does nothing if last message is from user', () => {
@@ -88,7 +88,7 @@ describe('useAgentStore', () => {
 
       store.updateLastAssistantMessage('chunk')
 
-      expect(store.chatMessages[0].content).toBe('Q')
+      expect(store.chatMessages[0]!.content).toBe('Q')
     })
 
     it('setStreaming updates isStreaming', () => {
@@ -256,7 +256,7 @@ describe('useAgentStore', () => {
 
   describe('addAction', () => {
     it('appends action to list on success', async () => {
-      const newAction = { id: '1', description: 'New action', status: ActionStatus.PENDING }
+      const newAction = { id: '1', description: 'New action', status: ActionStatus.TODO }
       vi.mocked(actionsApi.createAction).mockResolvedValue(newAction as any)
 
       const store = useAgentStore()

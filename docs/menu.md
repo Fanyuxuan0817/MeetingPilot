@@ -36,7 +36,7 @@ MeetingPilot/
 │   │   │   ├── common/                 # 通用基础组件 (如 Navbar, Sidebar)
 │   │   │   ├── audio/                  # 音频组件
 │   │   │   │   ├── AudioPlayer.vue     # 音频播放器外壳
-│   │   │   │   └── Waveform.vue        # WaveSurfer.js 封装的波形视图
+│   │   │   │   └── Waveform.vue        # 音频播放器的波形视图
 │   │   │   ├── meeting/                # 会议公共组件
 │   │   │   ├── transcript/             # 转录文本展示与高亮组件
 │   │   │   │   └── TranscriptList.vue  # 说话人切片列表 (联动波形)
